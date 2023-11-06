@@ -71,8 +71,9 @@ export const updateProduct = async (id, product, dispatch) => {
     const res = await userRequest.put(`products/${id}`, product);
     const updatedProduct = res.data; // Assuming the response contains the updated product
     await dispatch(updateProductSuccess({id, updatedProduct}));
-    console.log(res.data);
-    alert(res.data.title.slice(0, 10) + " Uploaded Successfully");
+    console.log(updatedProduct);
+
+    // alert(res.data.title.slice(0, 10) + " Uploaded Successfully");
     
   } catch (error) {
     dispatch(updateProductFailture()); // Fixed the typo in the action name

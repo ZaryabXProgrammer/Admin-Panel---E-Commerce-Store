@@ -6,7 +6,7 @@ import app from "../../Firebase";
 
 import { Publish } from "@material-ui/icons";
 import { useLocation } from "react-router-dom/cjs/react-router-dom.min";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { useEffect, useMemo, useState } from "react";
 import { userRequest } from "../../requestMethods";
 import { updateProduct } from "../../Redux/apiCalls";
@@ -23,7 +23,9 @@ export default function Product() {
 
     const productData = JSON.parse(persistedUserData.product).products
 
-    const product= productData.find((item)=>item._id === productId)
+    const product = productData.find((item) => item._id === productId);
+    const [updatedProduct, setupdatedProduct] = useState(product)
+    const [uploading, setuploading] = useState(false)
 
     // console.log(product1)
 
@@ -33,6 +35,7 @@ export default function Product() {
     // );
 
     const [pStats, setpStats] = useState([]);
+
 
     const MONTHS = useMemo(
 
@@ -53,8 +56,11 @@ export default function Product() {
     )
 
     useEffect(() => {
+
         const getStats = async () => {
+
             try {
+
                 const res = await userRequest.get('orders/income?pid=' + productId);
                 const list = res.data.sort((a, b) => {
                     return a._id - b._id
@@ -83,7 +89,9 @@ export default function Product() {
 
 
     const [file, setfile] = useState(null)
-    const [inputs, setinputs] = useState({})
+    const [inputs, setinputs] = useState('')
+
+
     const dispatch = useDispatch()
 
     const handleChange = (e) => {
@@ -95,24 +103,27 @@ export default function Product() {
         })
 
 
+
     }
 
-    
+
 
     const handleSubmit = async (e) => {
-
-        e.preventDefault()
+        e.preventDefault();
         const currentProductId = productId;
-        const filename = new Date().getTime() + file.name
-        const storage = getStorage(app)
+        const filename = new Date().getTime() + file.name;
+        const storage = getStorage(app);
         const storageRef = ref(storage, filename);
         const uploadTask = uploadBytesResumable(storageRef, file);
+
+        console.log('Upload task started'); // Log when the upload task starts
 
         // Register three observers:
         // 1. 'state_changed' observer, called any time the state changes
         // 2. Error observer, called on failure
         // 3. Completion observer, called on successful completion
-        uploadTask.on('state_changed',
+        uploadTask.on(
+            'state_changed',
             (snapshot) => {
                 // Observe state change events such as progress, pause, and resume
                 // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
@@ -123,30 +134,38 @@ export default function Product() {
                         console.log('Upload is paused');
                         break;
                     case 'running':
+                        
                         console.log('Upload is running');
+                        setuploading(true)
+                        
                         break;
-
                     default:
                 }
             },
             (error) => {
-                // Handle unsuccessful uploads
+                console.error('Upload task failed:', error); // Log errors in the upload task
             },
             () => {
+                console.log('Upload task completed');
+                setuploading(false)// Log when the upload task is completed
                 // Handle successful uploads on complete
-                // For instance, get the download URL: https://firebasestorage.googleapis.com/...
-                getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => async () => {
-                    console.log('File available at', downloadURL);
-                    const product = { ...inputs, img: downloadURL.toString() }
-                    console.log(product)
-                    await updateProduct(currentProductId, product, dispatch);
-                    
-
-                    // Reset the states
-                });
+                // For instance, get the download URL
+                getDownloadURL(uploadTask.snapshot.ref)
+                    .then((downloadURL) => {
+                        console.log('File available at', downloadURL);
+                        const product = { ...inputs, img: downloadURL.toString() };
+                        updateProduct(currentProductId, product, dispatch);
+                        setupdatedProduct(product)
+                        console.log(product);
+                        // Reset the states
+                    })
+                    .catch((error) => {
+                        console.error('Error getting download URL:', error);
+                    });
             }
         );
-    }
+    };
+
 
     // console.log(inputs)
     // console.log(file)
@@ -243,6 +262,8 @@ export default function Product() {
 
     // );
     return (
+
+
         <div className="product">
             <div className="productTitleContainer">
                 <h1 className="productTitle">Product</h1>
@@ -254,18 +275,19 @@ export default function Product() {
                 <div className="productTopLeft">
                     <Chart data={pStats} dataKey="Sales" title="Sales Performance" />
                 </div>
+
                 {product && (
                     <div className="productTopRight">
                         <div className="productInfoTop">
-                            <img src={product?.img} alt="" className="productInfoImg" />
-                            <span className="productName">{product?.title}</span>
+                            <img src={updatedProduct?.img} alt="" className="productInfoImg" />
+                            <span className="productName">{updatedProduct?.title}</span>
                         </div>
                         <div className="productInfoBottom">
                             <div className="productInfoItem">
                                 <span className="productInfoKey">
                                     {product._id.slice(0, 5)}...
                                 </span>
-                                <span className="productInfoValue">${product?.price}</span>
+                                <span className="productInfoValue">${updatedProduct?.price}</span>
                             </div>
                             <div className="productInfoItem">
                                 <span className="productInfoKey">Active:</span>
@@ -274,7 +296,7 @@ export default function Product() {
                             <div className="productInfoItem">
                                 <span className="productInfoKey">In Stock:</span>
                                 <span className="productInfoValue">
-                                    {product.inStock ? 'Yes' : 'No'}
+                                    {updatedProduct.inStock ? 'Yes' : 'No'}
                                 </span>
                             </div>
                         </div>
@@ -285,14 +307,14 @@ export default function Product() {
                 <div className="productBottom">
                     <form className="productForm">
                         <div className="productFormLeft">
-                            <label>{product?.title}</label>
+                            <label>{updatedProduct?.title}</label>
                             <input
                                 name="title"
                                 type="text"
                                 placeholder="Apple AirPod"
                                 onChange={handleChange}
                             />
-                            <label>{product?.inStock ? 'inStock' : 'Out Of Stock'}</label>
+                            <label>{updatedProduct?.inStock ? 'inStock' : 'Out Of Stock'}</label>
                             <select name="inStock" id="idStock" onChange={handleChange}>
                                 <option value="true">Yes</option>
                                 <option value="false">No</option>
@@ -300,7 +322,7 @@ export default function Product() {
                         </div>
                         <div className="productFormRight">
                             <div className="productUpload">
-                                <img src={product?.img} alt="" className="productUploadImg" />
+                                <img src={updatedProduct?.img} alt="" className="productUploadImg" />
                                 <label htmlFor="file">
                                     <Publish />
                                 </label>
@@ -314,6 +336,8 @@ export default function Product() {
                             <button className="productButton" onClick={handleSubmit}>
                                 Update
                             </button>
+
+                            {uploading && <span style={{ fontSize: '100x', fontWeight: 'bold', marginTop: '5px' }}>Uploading... Please Wait.</span>}
                         </div>
                     </form>
                 </div>

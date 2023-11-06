@@ -50,8 +50,8 @@ export default function User() {
 
     try {
       const res = await userRequest.put(`user/${userId}`, inputs)
+      setuser(res.data)
       alert(res.data.username + ' Updated')
-      window.location.reload()
     } catch (error) {
       console.log(error)
     }
